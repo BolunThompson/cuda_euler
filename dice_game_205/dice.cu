@@ -24,16 +24,33 @@ __global__ void game(unsigned int const per_thread, unsigned int seed,
   curandState state;
   curand_init(seed, bt_ind, 0, &state);
 
-  unsigned long outcome = 0;
+  unsigned int outcome = 0;
   for (int i = 0; i < per_thread; ++i) {
-    unsigned long peter_res = 0;
-    unsigned long colin_res = 0;
-    // I'm pretty sure, if this inefficient b/c div ops, it will be optimized
-    // TODO: Would manual loop unrolling improve perf? Wouldn't it be automatically unrolled?
-    for (int i = 0; i < 9; ++i)
-      peter_res += curand(&state) % 4 + 1;
-    for (int i = 0; i < 6; ++i)
-      colin_res += curand(&state) % 6 + 1;
+    // TODO: Would manual loop unrolling improve perf? Wouldn't it be
+    // automatically unrolled?
+
+     // in principle, initing all but the last temp2 could be removed since
+     // the values are overwritten in the for loop
+    unsigned int temp1;
+    unsigned int temp2;
+    for (int i = 0; i < 4; ++i) {
+      // I'm pretty sure, if this inefficient b/c div ops, it will be optimized
+      temp1 = (temp1 << 8) | (curand(&state) % 4 + 1);
+    }
+    for (int i = 0; i < 4; ++i) {
+      temp2 = (temp2 << 8) | (curand(&state) % 4 + 1);
+    }
+    auto peter_res = __dp4a(__vadd4(temp1, temp2), 0x01010101U, curand(&state) % 4 + 1);
+
+    for (int i = 0; i < 4; ++i) {
+      // TODO: Elim iterated +1
+      temp1 = (temp1 << 8) | (curand(&state) % 6 + 1);
+    }
+    temp2 = 0; // because not all packed values will be replaced
+    for (int i = 0; i < 2; ++i) {
+      temp2 = (temp2 << 8) | (curand(&state) % 6 + 1);
+    }
+    auto colin_res = __dp4a(__vadd4(temp1, temp2), 0x01010101U, 0U);
 
     outcome += (peter_res > colin_res);
   }
