@@ -29,18 +29,18 @@ __global__ void game(unsigned int const per_thread, unsigned int seed,
     // TODO: Would manual loop unrolling improve perf? Wouldn't it be
     // automatically unrolled?
 
-     // in principle, initing all but the last temp2 could be removed since
-     // the values are overwritten in the for loop
+    unsigned int rand = curand(&state);
     unsigned int temp1;
     unsigned int temp2;
     for (int i = 0; i < 4; ++i) {
-      // I'm pretty sure, if this inefficient b/c div ops, it will be optimized
-      temp1 = (temp1 << 8) | (curand(&state) % 4 + 1);
+      temp1 = (temp1 << 8) | ((rand & 0b11) + 1);
+      rand >>= 2;
     }
     for (int i = 0; i < 4; ++i) {
-      temp2 = (temp2 << 8) | (curand(&state) % 4 + 1);
+      temp2 = (temp2 << 8) | ((rand & 0b11) + 1);
+      rand >>= 2;
     }
-    auto peter_res = __dp4a(__vadd4(temp1, temp2), 0x01010101U, curand(&state) % 4 + 1);
+    auto peter_res = __dp4a(__vadd4(temp1, temp2), 0x01010101U, (curand(&state) & 0b11) + 1);
 
     for (int i = 0; i < 4; ++i) {
       // TODO: Elim iterated +1
