@@ -86,5 +86,9 @@ int main(int argc, char **argv) {
   double result = static_cast<__float128>(*h_out) / iters;
 
   std::printf("ANSWER: %.8f\n", result);
-  return 0;
+
+  delete h_out;
+  cudaFree(d_out);
+  checkCudaErrors();
+  return EXIT_SUCCESS;
 }
