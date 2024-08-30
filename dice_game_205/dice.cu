@@ -46,8 +46,8 @@ __global__ void game(unsigned long const per_thread, unsigned long seed,
 }
 
 int main(int argc, char **argv) {
-  constexpr unsigned int blocks = 64;
-  constexpr unsigned int threads = 1024;
+  constexpr unsigned int blocks = 512;
+  constexpr unsigned int threads = 512;
   constexpr unsigned long iters = 1e13;
 
   // won't exactly lead to iters iterations, but close enough.
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
   auto h_out = new unsigned long;
   cudaMemcpy(h_out, d_out, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
-  // TODO: try with float128
+  // TODO: would this work with float64?
   double result = static_cast<__float128>(*h_out) / iters;
   
   std::printf("ANSWER: %.8f\n", result);
