@@ -1,5 +1,6 @@
-CUDAFLAGS= -O0  -Werror -Wall -Wextra -std=c++20
+COMPILER_OPTIONS= -O0 -std=c++20 -Wall -Wextra -Werror
+CUDAFLAGS=# –Xptxas –dlcm=cg
 LIBS= -lcurand
 PROGRAM= dice
 all:
-	nvcc -o $(PROGRAM) dice.cu $(LIBS) $(CUDAFLAGS)
+	nvcc $(CUDAFLAGS) -o $(PROGRAM) dice.cu $(LIBS)
