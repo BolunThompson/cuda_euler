@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <cstdio>
 #include <ctime>
 #include <limits>
-#include <algorithm>
 
 #include <curand_kernel.h>
 
@@ -15,7 +15,7 @@
     }                                                                          \
   } while (0)
 
-__global__ void game(unsigned long const per_thread, unsigned long seed,
+__global__ void game(unsigned int const per_thread, unsigned int seed,
                      unsigned long long *const d_out) {
   const int bt_ind = blockDim.x * blockIdx.x + threadIdx.x;
   if (bt_ind == 0)
@@ -46,28 +46,28 @@ __global__ void game(unsigned long const per_thread, unsigned long seed,
 }
 
 int main(int argc, char **argv) {
-  constexpr unsigned int blocks = 512;
-  constexpr unsigned int threads = 512;
-  constexpr unsigned long iters = 1e13;
+  constexpr int blocks = 512;
+  constexpr int threads = 512;
+  constexpr unsigned long iters = 1e12;
 
   // won't exactly lead to iters iterations, but close enough.
-  constexpr unsigned long per_thread = iters / (blocks * threads);
+  constexpr unsigned int per_thread = iters / (blocks * threads);
 
   unsigned long long *d_out;
   cudaMalloc(&d_out, sizeof(unsigned long long));
   checkCudaErrors();
 
   std::printf("game run!\n");
-  
+
   game<<<blocks, threads>>>(per_thread, std::time(NULL), d_out);
   cudaDeviceSynchronize();
   checkCudaErrors();
 
-  auto h_out = new unsigned long;
+  auto h_out = new unsigned long long;
   cudaMemcpy(h_out, d_out, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
   // TODO: would this work with float64?
   double result = static_cast<__float128>(*h_out) / iters;
-  
+
   std::printf("ANSWER: %.8f\n", result);
   return 0;
 }
