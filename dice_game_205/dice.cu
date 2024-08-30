@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
   std::printf("game run!\n");
 
-  game<<<blocks, threads>>>(per_thread, std::time(NULL), d_out);
+  game<<<blocks, threads>>>(per_thread, 0xFAB39, d_out);
   cudaDeviceSynchronize();
   checkCudaErrors();
 
