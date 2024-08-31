@@ -17,24 +17,14 @@
     }                                                                          \
   } while (0)
 
-// Regenerates >= 6 values in temp
-#define REPLACE_BIG_VALS(temp)                                                 \
-  do {                                                                         \
-    unsigned int cmped = __vcmpgeu4(temp1, 0x06060606);                        \
-    unsigned int val_mask = __vminu4(cmped, rep_rand);                         \
-    temp = (temp & ~cmped) | val_mask;                                         \
-  } while (0)
-
 constexpr int BLOCKS = 512;
 constexpr int THREADS = 512;
 constexpr int SEED = 0xFAB39;
 constexpr unsigned long long ITERS = 1e12;
+
 // won't exactly lead to ITERS iterations, but close enough.
 constexpr unsigned long long PER_THREAD = ITERS / (BLOCKS * THREADS);
 constexpr unsigned long long ACTUAL_ITERS = PER_THREAD * BLOCKS * THREADS;
-// how many times it attempts to replace to big numbers before testing
-// TODO: Should I set this lower and add a test?
-constexpr int COLIN_RETRIES = 1;
 
 __device__ __forceinline__ unsigned int
 add4sum(unsigned int v1, unsigned int v2, unsigned int initial) {
@@ -45,7 +35,8 @@ __global__ void game(unsigned long long *const d_out) {
   const int bt_ind = blockDim.x * blockIdx.x + threadIdx.x;
 
   // each thread needs its own state
-  curandState state;
+  // TODO: try differnt rng functions
+  curandStatePhilox4_32_10_t state;
   curand_init(SEED, bt_ind, 0, &state);
 
   unsigned int outcome = 0;
@@ -61,21 +52,13 @@ __global__ void game(unsigned long long *const d_out) {
     // the initial value is bit 6 and 7 from the third byte
     auto peter_res = add4sum(temp1, temp2, ((rand & 0xc00000) >> 22) + 9);
     // At this point, I've used 18 bits of the 32 bits of randomness.
+    float4 rand4_0 = curand_uniform4(&state);
+    float rand5 = curand_uniform(&state);
+    float rand6 = curand_uniform(&state);
+    float colin_float_res =
+        6 + (rand4_0.x + rand4_0.y + rand4_0.z + rand4_0.w + rand5 + rand6) * 5;
 
-    rand = curand(&state);
-    temp1 = rand & 0x07070707;
-    temp2 = (rand & 0x00007070) >> 4;
-
-    #pragma unroll
-    for (int i = 0; i < COLIN_RETRIES; ++i) {
-      unsigned int rep_rand = curand(&state);
-      REPLACE_BIG_VALS(temp1);
-      rep_rand >>= 4;
-      REPLACE_BIG_VALS(temp2);
-    }
-    auto colin_res = add4sum(temp1, temp2, 6);
-
-    outcome += (peter_res > colin_res);
+    outcome += (peter_res > lrintf(colin_float_res));
   }
   // I don't think using shared memory would boost
   // performance because while blocking, the thread can
