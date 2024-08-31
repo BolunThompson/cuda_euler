@@ -17,13 +17,21 @@
     }                                                                          \
   } while (0)
 
-#define REPLACE_TOO_BIG_RAND(rand_val, test, rep_bits)                         \
+#define REPLACE_TOO_BIG_RAND(rand_var, test, rep_bits)                         \
   do {                                                                         \
-    if ((rand_val & (test)) == (test)) {                                       \
-      if (rep_rand == 0x03)                                                    \
+    if ((rand_var & (test)) == (test)) {                                       \
+      std::printf(                                                             \
+          "inputs:\nrand_var: %0#010x\ntest: %0#010x\nrep_bits: %0#010x\n\n",  \
+          rand_var, test, rep_bits);                                           \
+      while ((rep_rand & 0x6) == 0x6)                                          \
+        rep_rand >>= 3;                                                        \
+      if (rep_rand == 0xc)                                                     \
         rep_rand = curand(&state) | 0xc0000000;                                \
-      rand_val = ((rand_val) & ~(rep_bits)) | (rep_rand & (rep_bits));         \
+      rand_var = (rand_var & ~(rep_bits)) | (rep_rand & 0x7);                  \
       rep_rand >>= 3;                                                          \
+      std::printf("outputs:\nrand_var: %0#010x\ntest: %0#010x\nrep_bits: "     \
+                  "%0#010x\n\n\n",                                             \
+                  rand_var, test, rep_bits);                                   \
     }                                                                          \
   } while (0)
 
@@ -84,19 +92,22 @@ __global__ void game(unsigned int const per_thread, unsigned int const seed,
     outcome += (peter_res > colin_res);
   }
 
-  // I don't think using shared memory would boost performance because
-  // while blocking, the thread can switch to other threads to compute.
-  // Sure, there might be some idle period at the end as everything is loaded,
-  // but that is trivial, I think.
+  // I don't think using shared memory would boost
+  // performance because while blocking, the thread can
+  // switch to other threads to compute. Sure, there might
+  // be some idle period at the end as everything is
+  // loaded, but that is trivial, I think.
   atomicAdd(d_out, outcome);
 }
 
 int main(int argc, char **argv) {
-  // TODO: Switch blocks/threads count to optimal. See CUDA programming guide.
+  // TODO: Switch blocks/threads count to optimal. See CUDA
+  // programming guide.
   constexpr int blocks = 1;
   constexpr int threads = 1;
   constexpr unsigned long iters = 1e3;
-  // won't exactly lead to iters iterations, but close enough.
+  // won't exactly lead to iters iterations, but close
+  // enough.
   constexpr unsigned int per_thread = iters / (blocks * threads);
 
   unsigned long long *d_out;
