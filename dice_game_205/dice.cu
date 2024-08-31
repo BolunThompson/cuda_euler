@@ -17,27 +17,28 @@
     }                                                                          \
   } while (0)
 
-constexpr int BLOCKS = 1;
-constexpr int THREADS = 1;
+// Regenerates >= 6 values in temp
+#define REPLACE_BIG_VALS(temp)                                                 \
+  do {                                                                         \
+    unsigned int cmped = __vcmpgeu4(temp1, 0x06060606);                        \
+    unsigned int val_mask = __vminu4(cmped, rep_rand);                         \
+    temp = (temp & ~cmped) | val_mask;                                         \
+  } while (0)
+
+constexpr int BLOCKS = 512;
+constexpr int THREADS = 512;
 constexpr int SEED = 0xFAB39;
-constexpr unsigned long long ITERS = 1e3;
+constexpr unsigned long long ITERS = 1e12;
 // won't exactly lead to ITERS iterations, but close enough.
-constexpr unsigned long long PER_THREAD = ITERS / (BLOCKS * THREADS * 3);
-constexpr unsigned long long ACTUAL_ITERS = PER_THREAD * (BLOCKS * THREADS * 3);
+constexpr unsigned long long PER_THREAD = ITERS / (BLOCKS * THREADS);
+constexpr unsigned long long ACTUAL_ITERS = PER_THREAD * BLOCKS * THREADS;
+// how many times it attempts to replace to big numbers before testing
+// TODO: Should I set this lower and add a test?
+constexpr int COLIN_RETRIES = 1;
 
 __device__ __forceinline__ unsigned int
 add4sum(unsigned int v1, unsigned int v2, unsigned int initial) {
   return __dp4a(__vadd4(v1, v2), 0x01010101U, initial);
-}
-
-__device__ __forceinline__ unsigned int peter_game(unsigned int const rand) {
-  // TODO: Would using a tensor core speed up this operation?
-  // extracts bits 0 and 1 from each byte
-  unsigned int temp1 = rand & 0x03030303;
-  // extract bits 2 and 3 from each byte
-  unsigned int temp2 = (rand & 0x0c0c0c0c) >> 2;
-  // the initial value is bit 6 and 7 from the third byte
-  return add4sum(temp1, temp2, ((rand & 0xc00000) >> 22) + 9);
 }
 
 __global__ void game(unsigned long long *const d_out) {
@@ -50,38 +51,32 @@ __global__ void game(unsigned long long *const d_out) {
   unsigned int outcome = 0;
   // First loop, so I generate random colin numbers from 1-4
   // #pragma unroll
-  for (int i = 0; i < PER_THREAD * 2; ++i) {
-    unsigned int rand = curand(&state);
-    unsigned int peter_res = peter_game(rand);
-    // At this point, I've used 18 bits of the 32 bits of randomness.
-
-    // extract bits 4 and 5 from each byte
-    unsigned int temp1 = (rand & 0x30303030) >> 4;
-    // extract bits 6 and 7 from the first two bytes
-    unsigned int temp2 = (rand & 0x0000c0c0) >> 6;
-    // initial value is 6 to account for a die being from 1-6
-    unsigned int colin_res = add4sum(temp1, temp2, 6);
-    outcome += (peter_res > colin_res);
-    // I've used 30 out of 32 bits of randomness
-  }
-  // Likewise, but I generate random colin numbers from 5-6
-  // #pragma unroll
-  // TODO: is there a more compact way to do these calculations?
   for (int i = 0; i < PER_THREAD; ++i) {
     unsigned int rand = curand(&state);
-    unsigned int peter_res = peter_game(rand);
-    // Extract bit 4 from each byte
-    unsigned int temp1 = (rand & 0x10101010) >> 4;
-    // Extract bit 6 from the first two bytes
-    unsigned int temp2 = (rand & 0x4040) >> 6;
-    // initival value is 14 because 6 + 2 * 4, since the dice are from 5-6
-    unsigned int colin_res = add4sum(temp1, temp2, 14);
-    std::printf("temp1: %#010x, temp2: %#010x\n", temp1, temp2);
-    std::printf("peter: %u, colin: %u\n\n", peter_res, colin_res);
-    outcome += (peter_res > colin_res);
-    // I've used 24 bits of randomness
-  }
+    // TODO: Would using a tensor core speed up this operation?
+    // extracts bits 0 and 1 from each byte
+    auto temp1 = rand & 0x03030303;
+    // extract bits 2 and 3 from each byte
+    auto temp2 = (rand & 0x0c0c0c0c) >> 2;
+    // the initial value is bit 6 and 7 from the third byte
+    auto peter_res = add4sum(temp1, temp2, ((rand & 0xc00000) >> 22) + 9);
+    // At this point, I've used 18 bits of the 32 bits of randomness.
 
+    rand = curand(&state);
+    temp1 = rand & 0x07070707;
+    temp2 = (rand & 0x00007070) >> 4;
+
+    #pragma unroll
+    for (int i = 0; i < COLIN_RETRIES; ++i) {
+      unsigned int rep_rand = curand(&state);
+      REPLACE_BIG_VALS(temp1);
+      rep_rand >>= 4;
+      REPLACE_BIG_VALS(temp2);
+    }
+    auto colin_res = add4sum(temp1, temp2, 6);
+
+    outcome += (peter_res > colin_res);
+  }
   // I don't think using shared memory would boost
   // performance because while blocking, the thread can
   // switch to other threads to compute. Sure, there might
