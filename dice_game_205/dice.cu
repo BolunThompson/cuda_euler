@@ -5,6 +5,8 @@
 
 #include <curand_kernel.h>
 
+// TODO: Fix formatting.
+// TODO: Rename this macro
 #define checkCudaErrors()                                                      \
   do {                                                                         \
     cudaError_t err = cudaGetLastError();                                      \
@@ -63,10 +65,10 @@ __global__ void game(unsigned int const per_thread, unsigned int seed,
 }
 
 int main(int argc, char **argv) {
-  constexpr int blocks = 512;
-  constexpr int threads = 512;
-  constexpr unsigned long iters = 1e12;
-
+  // TODO: Switch blocks/threads count to optimal. See CUDA programming guide.
+  constexpr int blocks = 1;
+  constexpr int threads = 1;
+  constexpr unsigned long iters = 1e3;
   // won't exactly lead to iters iterations, but close enough.
   constexpr unsigned int per_thread = iters / (blocks * threads);
 
