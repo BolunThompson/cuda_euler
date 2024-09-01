@@ -41,7 +41,7 @@ __global__ void game(unsigned long long *const d_out) {
 
   unsigned int outcome = 0;
   // First loop, so I generate random colin numbers from 1-4
-  // #pragma unroll
+  #pragma unroll
   for (int i = 0; i < PER_THREAD; ++i) {
     unsigned int rand = curand(&state);
     // TODO: Would using a tensor core speed up this operation?
