@@ -52,13 +52,12 @@ __global__ void game(unsigned long long *const d_out) {
     // the initial value is bit 6 and 7 from the third byte
     auto peter_res = add4sum(temp1, temp2, ((rand & 0xc00000) >> 22) + 9);
     // At this point, I've used 18 bits of the 32 bits of randomness.
-    float4 rand4_0 = curand_uniform4(&state);
-    float rand5 = curand_uniform(&state);
-    float rand6 = curand_uniform(&state);
-    float colin_float_res =
-        6 + (rand4_0.x + rand4_0.y + rand4_0.z + rand4_0.w + rand5 + rand6) * 5;
+    // could I speed this up with << 2 and mod? With int16 ops?
+    unsigned long colin_res = (curand(&state) % 6) + (curand(&state) % 6) +
+                              (curand(&state) % 6) + (curand(&state) % 6) +
+                              (curand(&state) % 6) + (curand(&state) % 6) + 6;
 
-    outcome += (peter_res > lrintf(colin_float_res));
+    outcome += (peter_res > colin_res);
   }
   // I don't think using shared memory would boost
   // performance because while blocking, the thread can
