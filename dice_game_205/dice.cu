@@ -17,8 +17,8 @@
     }                                                                          \
   } while (0)
 
-constexpr int BLOCKS = 512;
-constexpr int THREADS = 512;
+constexpr int BLOCKS = 8192;
+constexpr int THREADS = 256;
 constexpr int SEED = 0xFAB39;
 constexpr unsigned long long ITERS = 1e12;
 
