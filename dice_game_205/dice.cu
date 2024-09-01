@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
   // Not using ITERS directly because PER_THREAD rounded it down
   double result = static_cast<long double>(*h_out) / ACTUAL_ITERS;
 
-  std::printf("ANSWER: %.8f\n", result);
+  std::printf("ANSWER: %.7f\n", result);
 
   delete h_out;
   cudaFree(d_out);
