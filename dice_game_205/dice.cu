@@ -53,9 +53,14 @@ __global__ void game(unsigned long long *const d_out) {
     auto peter_res = add4sum(temp1, temp2, ((rand & 0xc00000) >> 22) + 9);
     // At this point, I've used 18 bits of the 32 bits of randomness.
     // could I speed this up with << 2 and mod? With int16 ops?
-    unsigned long colin_res = (curand(&state) % 6) + (curand(&state) % 6) +
-                              (curand(&state) % 6) + (curand(&state) % 6) +
-                              (curand(&state) % 6) + (curand(&state) % 6) + 6;
+    temp1 = 0;
+    temp2 = 0;
+    #pragma unroll
+    for (int i = 0; i < 3; ++i) {
+      temp1 |= (curand(&state) % 6) << (i * 8);
+      temp2 |= (curand(&state) % 6) << (i * 8);
+    }
+    unsigned long colin_res = add4sum(temp1, temp2, 6);
 
     outcome += (peter_res > colin_res);
   }
