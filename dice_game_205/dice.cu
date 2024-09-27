@@ -33,6 +33,11 @@ add4sum(unsigned int v1, unsigned int v2, unsigned int initial) {
   return __dp4a(__vadd4(v1, v2), 0x01010101U, initial);
 }
 
+__device__ __forceinline__ unsigned int fastrange32(unsigned int word,
+                                                    unsigned int p) {
+  return __umulhi(word, p);
+}
+
 // TODO: Profile. The runpod container doesn't give me access to one,
 //       so I need to buy or borrow a computer with an NVIDIA GPU.
 //       However, the main issue is certainly the inner loop.
@@ -98,9 +103,10 @@ __global__ void game(unsigned long long *const d_out) {
     // If I were doing this again, I'd be more careful to keep track of profiler
     // results and specific code iteration. (TODO: Is there a tool for this?)
 
-    unsigned long colin_res = (curand(&state) % 6) + (curand(&state) % 6) +
-                              (curand(&state) % 6) + (curand(&state) % 6) +
-                              (curand(&state) % 6) + (curand(&state) % 6) + 6;
+    unsigned long colin_res =
+        fastrange32(curand(&state), 6) + fastrange32(curand(&state), 6) +
+        fastrange32(curand(&state), 6) + fastrange32(curand(&state), 6) +
+        fastrange32(curand(&state), 6) + fastrange32(curand(&state), 6) + 6;
 
     outcome += (peter_res > colin_res);
   }
