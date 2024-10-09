@@ -19,6 +19,8 @@
 
 // Experimentally determined to be reasonable.
 // TODO: Tune these.
+// The native approach of having BLOCKS = ITERS and THREADS = 1 doesn't work
+// due to scheduler overhead.
 constexpr int BLOCKS = 8192;
 constexpr int THREADS = 256;
 constexpr int SEED = 0xFAB39;
