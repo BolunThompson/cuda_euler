@@ -24,7 +24,7 @@
 constexpr int BLOCKS = 8192;
 constexpr int THREADS = 256;
 constexpr int SEED = 0xFAB39;
-constexpr unsigned long long ITERS = 1e12;
+constexpr unsigned long long ITERS = 1e11;
 
 // won't exactly lead to ITERS iterations, but close enough.
 constexpr unsigned long long PER_THREAD = ITERS / (BLOCKS * THREADS);
