@@ -5,8 +5,6 @@
 
 #include <curand_kernel.h>
 
-// TODO: Fix formatting.
-// TODO: Rename this macro
 #define checkCudaErrors()                                                      \
   do {                                                                         \
     cudaError_t err = cudaGetLastError();                                      \
@@ -120,9 +118,6 @@ __global__ void game(unsigned long long *const d_out) {
 }
 
 int main(int argc, char **argv) {
-  // TODO: Switch blocks/threads count to optimal. See CUDA
-  // programming guide.
-
   auto h_out = new unsigned long long;
   unsigned long long *d_out;
   cudaMalloc(&d_out, sizeof(unsigned long long));
