@@ -44,7 +44,7 @@ __device__ __forceinline__ unsigned int fastrange32(unsigned int word,
 //       so I need to buy or borrow a computer with an NVIDIA GPU.
 //       However, the main issue is certainly the inner loop.
 __global__ void game(unsigned long long *const d_out) {
-  const int bt_ind = blockDim.x * blockIdx.x + threadIdx.x;
+  const int bt_ind = (blockIdx.x << 16) | threadIdx.x;
 
   // each thread needs its own state
   // TODO: try differnt rng functions
