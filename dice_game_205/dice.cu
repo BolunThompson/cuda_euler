@@ -49,6 +49,10 @@ __global__ void game(unsigned long long *const d_out) {
   // each thread needs its own state
   // TODO: try differnt rng functions
   curandStatePhilox4_32_10_t state;
+  // Only alternative would be to copy form global memory, but this just
+  // sets a few struct members and isn't in the hot loop.
+  // Time spent on curand_init is small, from 3.2 -> 3.1s ish on 1e11 trials,
+  // with it being actually less because it'd have to be skipahead'd regardless
   curand_init(SEED, bt_ind, 0, &state);
 
   unsigned int outcome = 0;
